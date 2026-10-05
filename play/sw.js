@@ -4,10 +4,13 @@
 //   when only index.html changes. When the fresh page differs, open pages get a message ('lh-updated') and show a toast.
 // - Precache bypasses the HTTP cache too (cache:'reload'); otherwise a VERSION bump re-cached the stale page (max-age=600).
 // - Bump VERSION when the ASSETS list or the icons change.
-const VERSION = 'loophole-v2';
+const VERSION = 'loophole-v3';   // v3: the World 2 crochet sprite sheet joins the precache (DEPTH-2)
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icons/icon.svg', './icons/icon-180.png', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-192.png', './icons/icon-maskable-512.png'];
+// Optional precache: the World 2 crochet sprite sheet (DEPTH-2). Best-effort, one file at a time: a host that lacks art/ must still install
+// (the game falls back to its polygon art), so these never fail the install the way a missing core asset does.
+const OPTIONAL = ['./art/w2-sheet.png', './art/w2-sheet.json'];
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(ASSETS.map(u => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(VERSION).then(c => c.addAll(ASSETS.map(u => new Request(u, { cache: 'reload' }))).then(() => Promise.all(OPTIONAL.map(u => c.add(new Request(u, { cache: 'reload' })).catch(() => {}))))).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim()));
